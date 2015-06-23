@@ -11,3 +11,6 @@ curl -X POST \
   -G \
   -d '{"user":%username%,"commentText":%comment%}' \
   https://api.parse.com/1/functions/deleteComment
+  
+echo "Request sent- This black box will now self destruct.\n"
+TIMEOUT 5

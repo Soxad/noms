@@ -4,6 +4,63 @@ Parse.Cloud.define("hello", function(request, response) {
   response.success("mark kicks ass at javascript");
 });
 
+// get feed photos (noms) [basic spitter]
+// spit out the whole nom
+// profile photo spitter: takes user,index
+Parse.Cloud.define("spitProfilePhoto", function(request) {
+	var index = request.params.index;
+	var nomTarget;
+	nom = Parse.object.extend("nom");
+	query = new Parse.query(nom);
+	
+	query.skip(index);
+	query.first({
+		success: function(theNom) {
+			nomTarget = theNom;
+		}
+	});
+	return nomTarget;
+}
+
+// get profile photos [basic spitter]
+
+// Feed photo spitter: takes index
+Parse.Cloud.define("spitFeedPhoto", function(request) {
+	var index = request.params.index;
+	var nomTarget;
+	nom = Parse.object.extend("nom");
+	query = new Parse.query(nom);
+	query.descending("createdAt");
+	query.skip(index);
+	
+	query.first({
+		success: function(theNom) {
+			nomTarget = theNom;
+		}
+	});
+	return nomTarget;
+}
+
+// TODO: deal generation
+
+Parse.Cloud.define("getUserDeal", function(request) {
+	var dealTarget;
+	deal = Parse.object.extend("deal");
+	
+	dealCount = deal.count();
+	
+	randomDeal = Math.floor((Match.random() * dealCount) +1);
+	
+	query = new Parse.query(deal);
+	query.skip(randomDeal);
+	query.first({
+		success: function(theDeal){
+			dealTarget = theDeal;
+		}
+	});
+	return dealTarget;
+}
+
 //Incrementation
 
 function increment(request,object,member) {
@@ -40,6 +97,8 @@ Parse.Cloud.define("follow", function(request) {
 	followee.increment("followingCount");
 	follower.increment("followerCount");
 });
+
+
 
 //Validation
 
@@ -123,3 +182,4 @@ Parse.Cloud.define("deleteNom",function(request,response,user,nomTitle){
 	
 	offendingNom.destroy({});
 });
+
