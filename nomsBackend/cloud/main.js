@@ -7,13 +7,17 @@ Parse.Cloud.define("hello", function(request, response) {
 // get feed photos (noms) [basic spitter]
 // spit out the whole nom
 // profile photo spitter: takes user,index
-Parse.Cloud.define("spitProfilePhoto", function(request) {
+Parse.Cloud.define("spitProfilePhoto", function(request,response,user) {
 	var index = request.params.index;
+	var user = request.params.user;
 	var nomTarget;
+	
 	nom = Parse.object.extend("nom");
 	query = new Parse.query(nom);
 	
+	query.equalTo("author",user);
 	query.skip(index);
+	
 	query.first({
 		success: function(theNom) {
 			nomTarget = theNom;
@@ -41,9 +45,9 @@ Parse.Cloud.define("spitFeedPhoto", function(request) {
 	return nomTarget;
 }
 
-// TODO: deal generation
+// TODO: complete deal generation
 
-Parse.Cloud.define("getUserDeal", function(request) {
+Parse.Cloud.define("getRandomDeal", function(request) {
 	var dealTarget;
 	deal = Parse.object.extend("deal");
 	
@@ -63,7 +67,7 @@ Parse.Cloud.define("getUserDeal", function(request) {
 
 //Incrementation
 
-function increment(request,object,member) {
+function increment(request,response,object,member) {
 	return function(request) {
 		query = new Parse.Query(object);
 		query.get(request.object.get(object).id, {
@@ -123,14 +127,46 @@ Parse.Cloud.beforeSave("Restaurant", checkInvalidString(request,response,"Name")
 
 // Public user creation
 
-
-
 Parse.Cloud.beforeSave(Parse.User, function(request, response) {
 	var publicUser = Parse.Object.extend("publicUser");
 	publicUser.set("username",request.user.get("username"));
 	publicUser.set("is", request.user);
 	publicUser.save(null,null,null);
 });
+
+//Anti Spam
+// Do not create a new object if the user created an object of the same class within the time (seconds)
+function spamProtection (request, response, object, time, message) {
+	return function(request, response) {
+		var checkDate;
+		var targetObj = Parse.extend(object);
+		var query = Parse.Query(targetObj);
+		query.equalTo("createdBy",request.user);
+		
+		query.descending("createdAt");
+		query.select("createdAt");	
+		query.first({
+			success: function(obj) {
+				checkDate = obj.get("createdAt");
+				jsDate = new Date(checkDate);
+				now = new Date();
+				
+				if((now-jsDate) < (time * 1000)) {  //if the user is spamming
+					response.error(message);
+				} else {
+					response.success();
+				}
+				
+			},
+			error: function(error) {
+				response.success();  //The user has not created such an object yet, we dont need to check for spam
+			});
+		}
+	}
+}
+
+Parse.Cloud.beforeSave("nom",spamProtection(request,response,"nom",60,"Sorry, you need to wait 60 seconds between making new noms."));
+Parse.Cloud.beforeSave("comment",spamProtection(request,response,"comment",20,"Sorry, you are posting comments too fast."));
 
 //Temporary Moderation utilities
 
